@@ -11,7 +11,7 @@ function scanHost(host, port) {
       port: port,
       path: '/',
       method: 'GET',
-      timeout: 5000 // Set a timeout for the request
+      timeout: 10000 
     };
 
     const protocol = port === 443 ? https : http;
@@ -52,19 +52,24 @@ function scanHost(host, port) {
 }
 
 async function runScanner() {
-  const results = [];
+  let results = [];
+
+
+  setInterval(() => {
+    fs.writeFileSync('scan_results.json', JSON.stringify(results, null, 2));
+    console.log('Scan results saved to scan_results.json');
+    results = [];
+  }, 5000);
+
 
   for (const entry of data) {
     for (const port of entry.ports) {
       const result = await scanHost(entry.host, port);
       results.push(result);
-      console.log(`Scanned ${entry.host}:${port} - Result:`, result);
+      console.log(`Scanned ${entry.host}:${port}`, result?.status);
     }
   }
 
-  // Save results to a file
-  fs.writeFileSync('scan_results.json', JSON.stringify(results, null, 2));
-  console.log('Scan results saved to scan_results.json');
 }
 
 runScanner();
