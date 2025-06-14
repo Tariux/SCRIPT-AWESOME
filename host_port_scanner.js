@@ -2,7 +2,7 @@ const http = require('http');
 const https = require('https');
 const fs = require('fs');
 
-const data = [];
+const data = require('./scan/scan.json');
 
 function scanHost(host, port) {
   return new Promise((resolve) => {
@@ -67,4 +67,4 @@ async function runScanner() {
   console.log('Scan results saved to scan_results.json');
 }
 
-runScanner();
+// runScanner();
