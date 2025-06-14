@@ -2,82 +2,97 @@ const http = require('http');
 const https = require('https');
 const fs = require('fs');
 
-const data = require('./scan/scan.json');
+// Get command-line arguments
+const args = process.argv.slice(2);
+const inputFile = args[0] || './scan/scan.json'; // Default input file
+const outputFile = args[1] || `scan_results-${Date.now()}.json`; // Default output file
 
 function scanHost(host, port) {
-  return new Promise((resolve) => {
-    const options = {
-      hostname: host,
-      port: port,
-      path: '/',
-      method: 'GET',
-      timeout: 10000 
-    };
+    return new Promise((resolve) => {
+        const options = {
+            hostname: host,
+            port: port,
+            path: '/',
+            method: 'GET',
+            timeout: 10000
+        };
 
-    const protocol = port === 443 ? https : http;
+        const protocol = port === 443 ? https : http;
 
-    const req = protocol.request(options, (res) => {
-      let data = '';
+        const req = protocol.request(options, (res) => {
+            let data = '';
 
-      // Collect response data
-      res.on('data', (chunk) => {
-        data += chunk;
-      });
+            // Collect response data
+            res.on('data', (chunk) => {
+                data += chunk;
+            });
 
-      // On end of response
-      res.on('end', () => {
-        resolve({
-          host,
-          port,
-          status: res.statusCode,
-          headers: res.headers,
-          cookies: res.headers['set-cookie'] || [],
-          data: data
+            // On end of response
+            res.on('end', () => {
+                resolve({
+                    host,
+                    port,
+                    status: res.statusCode,
+                    headers: res.headers,
+                    cookies: res.headers['set-cookie'] || [],
+                    data: data
+                });
+            });
         });
-      });
-    });
 
-    // Handle request errors
-    req.on('error', (error) => {
-      resolve({
-        host,
-        port,
-        error: error.message
-      });
-    });
+        // Handle request errors
+        req.on('error', (error) => {
+            resolve({
+                host,
+                port,
+                error: error.message
+            });
+        });
 
-    // End the request
-    req.end();
-  });
+        // End the request
+        req.end();
+    });
 }
 
 async function runScanner() {
-  let results = [];
+    let results = [];
 
+    // Set interval to save results every 10 seconds
+    setInterval(() => {
+        let fileData = fs.readFileSync(outputFile, 'utf8');
+        try {
+            fileData = JSON.parse(fileData);
+        } catch (error) {
+            fileData = [];
+        }
+        const finalData = [
+            ...results,
+            ...fileData
+        ];
+        fs.writeFileSync(outputFile, JSON.stringify(finalData, null, 2));
+        console.log(`Scan results saved to ${outputFile}`);
+        results = [];
+    }, 10000);
 
-  setInterval(() => {
-    fs.writeFileSync(`scan_results-${Date.now()}.json`, JSON.stringify(results, null, 2));
-    console.log('Scan results saved to scan_results.json');
-    results = [];
-  }, 10000);
+    // Read input data
+    const data = JSON.parse(fs.readFileSync(inputFile, 'utf8'));
 
-
-  for (const entry of data) {
-    for (const port of entry.ports) {
-      const result = await scanHost(entry.host, port);
-      if (result.status ||
-        result.status === 200 ||
-        result.status === 201 ||
-        result.status === 302
-      ) {
-        results.push(result);
-        console.log(`+ Scanned ${entry.host}:${port}`);
-      } else {
-        console.log(`- Scan Failed ${entry.host}:${port}`);
-      }
+    for (const entry of data) {
+        for (const port of entry.ports) {
+            const result = await scanHost(entry.host, port);
+            if (result.status &&
+                result.status !== 404 &&
+                result.status !== 400 &&
+                result.status !== 401
+            ) {
+                results.push(result);
+                console.log(`+ Scanned ${entry.host}:${port}`);
+            } else {
+                console.log(`- Scan Failed ${entry.host}:${port}`);
+            }
+        }
     }
-  }
-
 }
 
+// Start the scanner
 runScanner();
