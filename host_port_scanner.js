@@ -67,4 +67,4 @@ async function runScanner() {
   console.log('Scan results saved to scan_results.json');
 }
 
-// runScanner();
+runScanner();
