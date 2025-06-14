@@ -1,7 +1,7 @@
 const axios = require('axios');
 const fs = require('fs');
 
-const data = require('./scan/1/scan-0.json');
+const data = []
 
 async function scanHost(host, port) {
   const url = `http://${host}:${port}`;
@@ -35,6 +35,7 @@ async function runScanner() {
     }
   }
 
+  // Save results to a file
   fs.writeFileSync('scan_results.json', JSON.stringify(results, null, 2));
   console.log('Scan results saved to scan_results.json');
 }
