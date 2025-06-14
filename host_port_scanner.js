@@ -56,16 +56,20 @@ async function runScanner() {
 
 
   setInterval(() => {
-    fs.writeFileSync('scan_results.json', JSON.stringify(results, null, 2));
+    fs.writeFileSync(`scan_results-${Date.now()}.json`, JSON.stringify(results, null, 2));
     console.log('Scan results saved to scan_results.json');
     results = [];
-  }, 5000);
+  }, 10000);
 
 
   for (const entry of data) {
     for (const port of entry.ports) {
       const result = await scanHost(entry.host, port);
-      if (result.status) {
+      if (result.status ||
+        result.status === 200 ||
+        result.status === 201 ||
+        result.status === 302
+      ) {
         results.push(result);
         console.log(`+ Scanned ${entry.host}:${port}`);
       } else {
