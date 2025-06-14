@@ -1,6 +1,7 @@
 const http = require('http');
 const https = require('https');
 const fs = require('fs');
+const path = require('path');
 
 // Get command-line arguments
 const args = process.argv.slice(2);
@@ -62,8 +63,8 @@ async function runScanner() {
         try {
             let fileData = [];
             // Check if the output file exists before reading
-            if (fs.existsSync(outputFile)) {
-                const existingData = fs.readFileSync(outputFile, 'utf8');
+            if (fs.existsSync(path.join(process.cwd(), outputFile))) {
+                const existingData = fs.readFileSync(path.join(process.cwd(), outputFile), 'utf8');
                 try {
                     fileData = JSON.parse(existingData);
                 } catch (error) {
@@ -77,8 +78,8 @@ async function runScanner() {
             ];
 
             // Write results to the output file safely
-            fs.writeFileSync(outputFile, JSON.stringify(finalData, null, 2));
-            console.log(`Scan results saved to ${outputFile}`);
+            fs.writeFileSync(path.join(process.cwd(), outputFile), JSON.stringify(finalData, null, 2));
+            console.log(`Scan results saved to ${path.join(process.cwd(), outputFile)}`);
             results = []; // Clear results after saving
         } catch (error) {
             console.error(`Error saving results: ${error.message}`);
@@ -87,7 +88,7 @@ async function runScanner() {
 
     // Read input data
     try {
-        const data = JSON.parse(fs.readFileSync(inputFile, 'utf8'));
+        const data = JSON.parse(fs.readFileSync(path.join(process.cwd(), inputFile), 'utf8'));
 
         for (const entry of data) {
             for (const port of entry.ports) {
