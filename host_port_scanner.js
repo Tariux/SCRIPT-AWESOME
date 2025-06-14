@@ -65,8 +65,12 @@ async function runScanner() {
   for (const entry of data) {
     for (const port of entry.ports) {
       const result = await scanHost(entry.host, port);
-      results.push(result);
-      console.log(`Scanned ${entry.host}:${port}`, result?.status);
+      if (result.status) {
+        results.push(result);
+        console.log(`+ Scanned ${entry.host}:${port}`);
+      } else {
+        console.log(`- Scan Failed ${entry.host}:${port}`);
+      }
     }
   }
 
