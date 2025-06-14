@@ -1,27 +1,54 @@
-const axios = require('axios');
+const http = require('http');
+const https = require('https');
 const fs = require('fs');
 
-const data = []
+const data = [];
 
-async function scanHost(host, port) {
-  const url = `http://${host}:${port}`;
-  try {
-    const response = await axios.get(url);
-    return {
-      host,
-      port,
-      status: response.status,
-      headers: response.headers,
-      cookies: response.headers['set-cookie'] || [],
-      data: response.data
+function scanHost(host, port) {
+  return new Promise((resolve) => {
+    const options = {
+      hostname: host,
+      port: port,
+      path: '/',
+      method: 'GET',
+      timeout: 5000 // Set a timeout for the request
     };
-  } catch (error) {
-    return {
-      host,
-      port,
-      error: error.message
-    };
-  }
+
+    const protocol = port === 443 ? https : http;
+
+    const req = protocol.request(options, (res) => {
+      let data = '';
+
+      // Collect response data
+      res.on('data', (chunk) => {
+        data += chunk;
+      });
+
+      // On end of response
+      res.on('end', () => {
+        resolve({
+          host,
+          port,
+          status: res.statusCode,
+          headers: res.headers,
+          cookies: res.headers['set-cookie'] || [],
+          data: data
+        });
+      });
+    });
+
+    // Handle request errors
+    req.on('error', (error) => {
+      resolve({
+        host,
+        port,
+        error: error.message
+      });
+    });
+
+    // End the request
+    req.end();
+  });
 }
 
 async function runScanner() {
