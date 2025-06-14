@@ -58,39 +58,54 @@ async function runScanner() {
     let results = [];
 
     // Set interval to save results every 10 seconds
-    setInterval(() => {
-        let fileData = fs.readFileSync(outputFile, 'utf8');
+    setInterval(async () => {
         try {
-            fileData = JSON.parse(fileData);
+            let fileData = [];
+            // Check if the output file exists before reading
+            if (fs.existsSync(outputFile)) {
+                const existingData = fs.readFileSync(outputFile, 'utf8');
+                try {
+                    fileData = JSON.parse(existingData);
+                } catch (error) {
+                    console.error(`Error parsing existing data: ${error.message}`);
+                }
+            }
+
+            const finalData = [
+                ...results,
+                ...fileData
+            ];
+
+            // Write results to the output file safely
+            fs.writeFileSync(outputFile, JSON.stringify(finalData, null, 2));
+            console.log(`Scan results saved to ${outputFile}`);
+            results = []; // Clear results after saving
         } catch (error) {
-            fileData = [];
+            console.error(`Error saving results: ${error.message}`);
         }
-        const finalData = [
-            ...results,
-            ...fileData
-        ];
-        fs.writeFileSync(outputFile, JSON.stringify(finalData, null, 2));
-        console.log(`Scan results saved to ${outputFile}`);
-        results = [];
     }, 10000);
 
     // Read input data
-    const data = JSON.parse(fs.readFileSync(inputFile, 'utf8'));
+    try {
+        const data = JSON.parse(fs.readFileSync(inputFile, 'utf8'));
 
-    for (const entry of data) {
-        for (const port of entry.ports) {
-            const result = await scanHost(entry.host, port);
-            if (result.status &&
-                result.status !== 404 &&
-                result.status !== 400 &&
-                result.status !== 401
-            ) {
-                results.push(result);
-                console.log(`+ Scanned ${entry.host}:${port}`);
-            } else {
-                console.log(`- Scan Failed ${entry.host}:${port}`);
+        for (const entry of data) {
+            for (const port of entry.ports) {
+                const result = await scanHost(entry.host, port);
+                if (result.status &&
+                    result.status !== 404 &&
+                    result.status !== 400 &&
+                    result.status !== 401
+                ) {
+                    results.push(result);
+                    console.log(`+ Scanned ${entry.host}:${port}`);
+                } else {
+                    console.log(`- Scan Failed ${entry.host}:${port}`);
+                }
             }
         }
+    } catch (error) {
+        console.error(`Error reading input file: ${error.message}`);
     }
 }
 
